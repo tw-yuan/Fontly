@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>字體即時預覽（本地渲染）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" />
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+  <style>
+    :root {
+      --bg: #f7f8fa;
+      --container-bg: #fff;
+      --text: #222;
+      --subtext: #555;
+      --primary: #4f8cff;
+      --border: #e0e3e8;
+      --card-shadow: 0 2px 12px 0 #a5b4fc22;
+      --btn-bg: #f7f8fa;
+      --btn-color: #4f8cff;
+      --btn-hover-bg: #4f8cff;
+      --btn-hover-color: #fff;
+    }
+    body {
+      font-family: 'Noto Sans TC', 'Segoe UI', Arial, sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      transition: background 0.6s;
+      color: var(--text);
+    }
+    .container {
+      background: var(--container-bg);
+      margin-top: 56px;
+      padding: 44px 32px 32px 32px;
+      border-radius: 22px;
+      box-shadow: var(--card-shadow);
+      max-width: 440px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: fadeIn 0.8s cubic-bezier(.4,0,.2,1);
+      position: relative;
+      overflow: hidden;
+    }
+    .container::before {
+      content: '';
+      position: absolute;
+      top: -60px; left: -60px;
+      width: 160px; height: 160px;
+      background: radial-gradient(circle, #a5b4fc55 0%, #fff0 80%);
+      z-index: 0;
+      pointer-events: none;
+    }
+    h1 {
+      font-size: 2.1rem;
+      font-weight: 500;
+      margin-bottom: 26px;
+      color: var(--primary);
+      letter-spacing: 1px;
+      text-align: center;
+      animation: slideDown 0.7s cubic-bezier(.4,0,.2,1);
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .material-symbols-rounded {
+      font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 48;
+      vertical-align: middle;
+      animation: popIn 0.7s cubic-bezier(.4,0,.2,1);
+    }
+    .input-group {
+      width: 100%;
+      margin-bottom: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 1;
+    }
+    label {
+      font-size: 1rem;
+      color: var(--subtext);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .file-upload {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .file-upload input[type="file"] {
+      opacity: 0;
+      width: 0.1px;
+      height: 0.1px;
+      position: absolute;
+      z-index: -1;
+    }
+    .file-upload .upload-btn {
+      display: inline-flex;
+      align-items: center;
+      background: linear-gradient(90deg, #4f8cff 60%, #a5b4fc 100%);
+      color: #fff;
+      padding: 9px 22px;
+      border-radius: 8px;
+      font-size: 1.08rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 8px 0 rgba(79,140,255,0.10);
+      transition: background 0.2s, box-shadow 0.2s;
+      border: none;
+      outline: none;
+      gap: 14px;
+      position: relative;
+      z-index: 1;
+    }
+    .file-upload .upload-btn:hover {
+      background: linear-gradient(90deg, #3b82f6 60%, #818cf8 100%);
+      box-shadow: 0 4px 16px 0 rgba(79,140,255,0.13);
+    }
+    .file-upload .upload-btn .material-symbols-rounded {
+      font-size: 2rem;
+      color: #4f8cff;
+      background: radial-gradient(circle at 60% 40%, #fff 0%, #a5b4fc 100%);
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 2px;
+      box-shadow: 0 2px 8px 0 rgba(79,140,255,0.13);
+      filter: drop-shadow(0 1px 2px #fff8);
+    }
+    .font-info {
+      font-size: 1.05rem;
+      color: var(--text);
+      margin-left: 4px;
+      margin-top: 8px;
+      font-weight: 500;
+      min-height: 2.2em;
+      transition: color 0.3s;
+      word-break: break-all;
+      z-index: 1;
+      background: var(--container-bg);
+      border-radius: 8px;
+      padding: 10px 14px;
+      box-shadow: var(--card-shadow);
+      line-height: 1.7;
+    }
+    textarea {
+      width: 100%;
+      font-size: 1.2rem;
+      padding: 10px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+      background: var(--container-bg);
+      transition: border-color 0.2s, background 0.2s;
+      box-sizing: border-box;
+      resize: vertical;
+      min-height: 60px;
+      max-height: 220px;
+      line-height: 1.7;
+    }
+    textarea:focus {
+      border-color: var(--primary);
+      background: #fff;
+    }
+    #preview {
+      min-height: 90px;
+      width: 100%;
+      border-radius: 12px;
+      border: 1.5px solid var(--border);
+      background: var(--container-bg);
+      padding: 24px 18px;
+      font-size: 2.2rem;
+      color: var(--text);
+      margin-top: 10px;
+      box-sizing: border-box;
+      transition: box-shadow 0.3s, border-color 0.3s, background 0.3s;
+      box-shadow: 0 2px 8px 0 rgba(79,140,255,0.04);
+      animation: popIn 0.7s cubic-bezier(.4,0,.2,1);
+      z-index: 1;
+      position: relative;
+      overflow-x: auto;
+      white-space: pre-line;
+      word-break: break-word;
+      user-select: none;
+    }
+    #preview:focus-within, #preview.active {
+      border-color: var(--primary);
+      box-shadow: 0 4px 16px 0 rgba(79,140,255,0.10);
+      background: #fff;
+    }
+    #preview::after {
+      content: '\e145';
+      font-family: 'Material Symbols Rounded';
+      position: absolute;
+      right: 18px; top: 18px;
+      font-size: 1.3rem;
+      color: var(--primary);
+      opacity: 0.18;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      animation: fadeIn 1.2s 0.2s both;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @media (max-width: 600px) {
+      .container {
+        padding: 24px 8px 16px 8px;
+        margin-top: 16px;
+        max-width: 98vw;
+      }
+      h1 {
+        font-size: 1.3rem;
+      }
+      #preview {
+        font-size: 1.3rem;
+        padding: 12px 6px;
+      }
+      .file-upload .upload-btn .material-symbols-rounded {
+        font-size: 1.3rem;
+        width: 30px;
+        height: 30px;
+      }
+    }
+    .sample-btn-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .sample-btn {
+      background: var(--btn-bg);
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 14px;
+      font-size: 1rem;
+      color: var(--btn-color);
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+      font-family: inherit;
+    }
+    .sample-btn:hover {
+      background: var(--btn-hover-bg);
+      color: var(--btn-hover-color);
+      border-color: var(--primary);
+    }
+    .preview-controls {
+      display: flex;
+      gap: 18px;
+      margin: 0 0 18px 0;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      min-width: 110px;
+    }
+    .control-group label {
+      font-size: 0.98rem;
+      color: var(--subtext);
+      margin-bottom: 2px;
+    }
+    .control-group input[type="range"] {
+      width: 90px;
+      margin-right: 6px;
+    }
+    .control-group input[type="number"] {
+      font-size: 1rem;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      padding: 2px 4px;
+      margin-left: 2px;
+      margin-right: 2px;
+    }
+    .bg-btn-group {
+      display: flex;
+      gap: 6px;
+      margin-top: 2px;
+    }
+    .bg-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 2px solid var(--border);
+      cursor: pointer;
+      outline: none;
+      background: var(--btn-bg);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      box-shadow: 0 1px 4px 0 var(--card-shadow);
+      position: relative;
+    }
+    .bg-btn[data-bg="white"] { background: #fff; }
+    .bg-btn[data-bg="gray"] { background: #e5e7eb; }
+    .bg-btn[data-bg="black"] { background: #222; }
+    .bg-btn[data-bg="transparent"] {
+      background: repeating-conic-gradient(#e5e7eb 0% 25%, #fff 0% 50%) 50% / 16px 16px;
+    }
+    .bg-btn.selected {
+      border-color: var(--primary);
+      box-shadow: 0 2px 8px 0 var(--primary)33;
+    }
+    #multiPreview {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      margin-top: 18px;
+    }
+    .font-preview-card {
+      background: var(--container-bg);
+      border-radius: 14px;
+      box-shadow: var(--card-shadow);
+      padding: 18px 18px 18px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border: 1.5px solid var(--border);
+      max-width: 100%;
+      position: relative;
+    }
+    .font-preview-title {
+      font-size: 1.08rem;
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 2px;
+      word-break: break-all;
+    }
+    .font-preview-content {
+      min-height: 60px;
+      font-size: var(--font-size, 36px);
+      line-height: var(--line-height, 1.4);
+      letter-spacing: var(--letter-spacing, 0px);
+      font-family: inherit;
+      background: inherit;
+      color: inherit;
+      border-radius: 8px;
+      padding: 10px 0;
+      transition: background 0.2s, color 0.2s;
+      word-break: break-word;
+      white-space: pre-line;
+    }
+    .font-preview-download {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      background: var(--btn-bg);
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 7px;
+      cursor: pointer;
+      color: var(--btn-color);
+      font-size: 1.2rem;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+    }
+    .font-preview-download:hover {
+      background: var(--btn-hover-bg);
+      color: var(--btn-hover-color);
+      border-color: var(--primary);
+    }
+    .font-style-controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 4px;
+      align-items: center;
+    }
+    .font-style-btn {
+      background: var(--btn-bg);
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 10px;
+      font-size: 1rem;
+      color: var(--btn-color);
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+      font-family: inherit;
+    }
+    .font-style-btn.active {
+      background: var(--btn-hover-bg);
+      color: var(--btn-hover-color);
+      border-color: var(--primary);
+    }
+    .font-license {
+      font-size: 0.97rem;
+      color: #b48a00;
+      background: #fffbe6;
+      border-radius: 6px;
+      padding: 6px 10px;
+      margin-top: 6px;
+      margin-bottom: 2px;
+      line-height: 1.6;
+      border: 1px solid #ffe58f;
+      word-break: break-all;
+    }
+    .font-license a { color: #b48a00; text-decoration: underline; }
+    .copy-css-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #f5f5f5;
+      border: 1px solid #d9d9d9;
+      border-radius: 5px;
+      padding: 4px 12px;
+      font-size: 0.97rem;
+      color: #333;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background 0.2s, border 0.2s;
+    }
+    .copy-css-btn:hover {
+      background: #e6f7ff;
+      border-color: #91d5ff;
+    }
+    .copy-css-btn svg {
+      width: 1em;
+      height: 1em;
+      vertical-align: -0.1em;
+    }
+    .copy-toast {
+      position: fixed;
+      left: 50%;
+      top: 30px;
+      transform: translateX(-50%);
+      background: #333;
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 6px;
+      font-size: 1rem;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 9999;
+      transition: opacity 0.3s;
+    }
+    .copy-toast.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1><span class="material-symbols-rounded">text_fields</span>字體即時預覽</h1>
+    <div class="input-group" style="align-items:center;">
+      <div class="file-upload">
+        <label for="fontInput" class="upload-btn">
+          <span class="material-symbols-rounded">upload</span>
+          選擇字體檔案（可多選）
+        </label>
+        <input type="file" id="fontInput" accept=".ttf,.otf,.woff,.woff2" multiple>
+      </div>
+      <div class="font-info" id="fontInfo"></div>
+    </div>
+    <div class="input-group">
+      <div class="sample-btn-group">
+        <button type="button" class="sample-btn" data-sample="中文預覽文字測試">中文</button>
+        <button type="button" class="sample-btn" data-sample="The quick brown fox jumps over the lazy dog">英文</button>
+        <button type="button" class="sample-btn" data-sample="0123456789">數字</button>
+        <button type="button" class="sample-btn" data-sample="，。！？：；""''—…">標點</button>
+        <button type="button" class="sample-btn" data-sample="中文預覽123，ABCabc！">混合</button>
+      </div>
+      <label for="textInput">輸入要預覽的文字</label>
+      <textarea id="textInput" placeholder="請輸入要預覽的文字">預覽文字</textarea>
+    </div>
+    <div class="preview-controls">
+      <div class="control-group">
+        <label for="fontSizeRange">字體大小</label>
+        <input type="range" id="fontSizeRange" min="16" max="120" value="36">
+        <input type="number" id="fontSizeNum" min="16" max="120" value="36" style="width:48px;">
+      </div>
+      <div class="control-group">
+        <label for="lineHeightRange">行高</label>
+        <input type="range" id="lineHeightRange" min="1" max="3" step="0.05" value="1.4">
+        <input type="number" id="lineHeightNum" min="1" max="3" step="0.05" value="1.4" style="width:48px;">
+      </div>
+      <div class="control-group">
+        <label for="letterSpacingRange">字距</label>
+        <input type="range" id="letterSpacingRange" min="-2" max="10" step="0.1" value="0">
+        <input type="number" id="letterSpacingNum" min="-2" max="10" step="0.1" value="0" style="width:48px;">
+      </div>
+      <div class="control-group">
+        <label>背景</label>
+        <div class="bg-btn-group">
+          <button type="button" class="bg-btn" data-bg="white" title="白色"></button>
+          <button type="button" class="bg-btn" data-bg="gray" title="灰色"></button>
+          <button type="button" class="bg-btn" data-bg="black" title="黑色"></button>
+          <button type="button" class="bg-btn" data-bg="transparent" title="透明格紋"></button>
+        </div>
+      </div>
+    </div>
+    <div id="multiPreview"></div>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const fontInput = document.getElementById('fontInput');
+      const textInput = document.getElementById('textInput');
+      const preview = document.getElementById('preview');
+      const fontNameInfo = document.getElementById('fontNameInfo');
+      const fontFormatInfo = document.getElementById('fontFormatInfo');
+      const fontSizeInfo = document.getElementById('fontSizeInfo');
+      let fontFiles = [];
+      let fontFaces = [];
+      let currentBg = 'white';
+
+      const FONT_LICENSES = [
+        {
+          name: 'Noto',
+          match: /noto/i,
+          license: 'SIL Open Font License 1.1',
+          url: 'https://fonts.google.com/noto/'
+        },
+        {
+          name: 'Roboto',
+          match: /roboto/i,
+          license: 'Apache License, Version 2.0',
+          url: 'https://fonts.google.com/specimen/Roboto'
+        },
+        {
+          name: 'Open Sans',
+          match: /open[-_ ]?sans/i,
+          license: 'Apache License, Version 2.0',
+          url: 'https://fonts.google.com/specimen/Open+Sans'
+        },
+        {
+          name: '思源黑體',
+          match: /source[-_ ]?han[-_ ]?sans|思源黑體/i,
+          license: 'SIL Open Font License 1.1',
+          url: 'https://github.com/adobe-fonts/source-han-sans'
+        },
+        {
+          name: '思源宋體',
+          match: /source[-_ ]?han[-_ ]?serif|思源宋體/i,
+          license: 'SIL Open Font License 1.1',
+          url: 'https://github.com/adobe-fonts/source-han-serif'
+        },
+        {
+          name: 'Inter',
+          match: /inter/i,
+          license: 'SIL Open Font License 1.1',
+          url: 'https://fonts.google.com/specimen/Inter'
+        },
+        {
+          name: 'Lato',
+          match: /lato/i,
+          license: 'SIL Open Font License 1.1',
+          url: 'https://fonts.google.com/specimen/Lato'
+        },
+        {
+          name: 'PingFang',
+          match: /pingfang/i,
+          license: 'Apple system font, commercial',
+          url: 'https://developer.apple.com/fonts/'
+        }
+      ];
+
+      function parseFontStyleFromName(name) {
+        const lower = name.toLowerCase();
+        return {
+          bold: /bold|700|800|900/.test(lower),
+          italic: /italic|oblique/.test(lower)
+        };
+      }
+
+      function getFontLicenseInfo(name) {
+        for (const lic of FONT_LICENSES) {
+          if (lic.match.test(name)) return lic;
+        }
+        return null;
+      }
+
+      function makeFontFaceCSS(fontName, fileUrl, style, weight, format) {
+        return `@font-face {\n  font-family: '${fontName}';\n  src: url('${fileUrl}') format('${format}');\n  font-weight: ${weight};\n  font-style: ${style};\n}`;
+      }
+
+      function showCopyToast(msg) {
+        let toast = document.querySelector('.copy-toast');
+        if (!toast) {
+          toast = document.createElement('div');
+          toast.className = 'copy-toast';
+          document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 1600);
+      }
+
+      function renderMultiPreview() {
+        const text = textInput.value;
+        const fontSize = fontSizeRange.value;
+        const lineHeight = lineHeightRange.value;
+        const letterSpacing = letterSpacingRange.value;
+        const bg = currentBg;
+        const multiPreview = document.getElementById('multiPreview');
+        multiPreview.innerHTML = '';
+        if (fontFiles.length === 0) {
+          multiPreview.innerHTML = '<div style="color:#aaa;text-align:center;">尚未選擇字體</div>';
+          return;
+        }
+        fontFiles.forEach((file, idx) => {
+          const card = document.createElement('div');
+          card.className = 'font-preview-card';
+          // 字重/斜體控制
+          const styleInfo = parseFontStyleFromName(file.name);
+          let isBold = styleInfo.bold;
+          let isItalic = styleInfo.italic;
+          const styleControls = document.createElement('div');
+          styleControls.className = 'font-style-controls';
+          // Bold
+          const boldBtn = document.createElement('button');
+          boldBtn.className = 'font-style-btn' + (isBold ? ' active' : '');
+          boldBtn.textContent = '粗體';
+          boldBtn.title = '切換粗體';
+          boldBtn.addEventListener('click', function() {
+            isBold = !isBold;
+            renderContent();
+            boldBtn.classList.toggle('active', isBold);
+          });
+          // Italic
+          const italicBtn = document.createElement('button');
+          italicBtn.className = 'font-style-btn' + (isItalic ? ' active' : '');
+          italicBtn.textContent = '斜體';
+          italicBtn.title = '切換斜體';
+          italicBtn.addEventListener('click', function() {
+            isItalic = !isItalic;
+            renderContent();
+            italicBtn.classList.toggle('active', isItalic);
+          });
+          styleControls.appendChild(boldBtn);
+          styleControls.appendChild(italicBtn);
+          card.appendChild(styleControls);
+          // 下載按鈕
+          const downloadBtn = document.createElement('button');
+          downloadBtn.className = 'font-preview-download';
+          downloadBtn.title = '下載此預覽為圖片';
+          downloadBtn.innerHTML = '<span class="material-symbols-rounded">download</span>';
+          downloadBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            html2canvas(card, {backgroundColor: null, useCORS: true, scale: 2}).then(canvas => {
+              const link = document.createElement('a');
+              link.download = file.name.replace(/\.[^/.]+$/, '') + '_preview.png';
+              link.href = canvas.toDataURL('image/png');
+              link.click();
+            });
+          });
+          card.appendChild(downloadBtn);
+          // 標題
+          const title = document.createElement('div');
+          title.className = 'font-preview-title';
+          title.textContent = `${file.name}（${file.ext}，${file.size}）`;
+          card.appendChild(title);
+          // 預覽內容
+          const content = document.createElement('div');
+          content.className = 'font-preview-content';
+          function renderContent() {
+            content.innerHTML = text.replace(/\n/g, '<br>');
+            content.style.fontFamily = `'${file.fontName}', 'Noto Sans TC', 'Segoe UI', Arial, sans-serif`;
+            content.style.fontSize = fontSize + 'px';
+            content.style.lineHeight = lineHeight;
+            content.style.letterSpacing = letterSpacing + 'px';
+            content.style.fontWeight = isBold ? 'bold' : 'normal';
+            content.style.fontStyle = isItalic ? 'italic' : 'normal';
+            // 背景與顏色
+            if (bg === 'white') {
+              content.style.background = '#fff';
+              content.style.color = '#222';
+              content.style.borderColor = '#e0e3e8';
+            } else if (bg === 'gray') {
+              content.style.background = '#e5e7eb';
+              content.style.color = '#222';
+              content.style.borderColor = '#bfc3c9';
+            } else if (bg === 'black') {
+              content.style.background = '#222';
+              content.style.color = '#fff';
+              content.style.borderColor = '#444';
+            } else if (bg === 'transparent') {
+              content.style.background = 'repeating-conic-gradient(#e5e7eb 0% 25%, #fff 0% 50%) 50% / 32px 32px';
+              content.style.color = '#222';
+              content.style.borderColor = '#e0e3e8';
+            }
+          }
+          renderContent();
+          card.appendChild(content);
+          // 授權提醒
+          const lic = getFontLicenseInfo(file.name);
+          const licenseDiv = document.createElement('div');
+          licenseDiv.className = 'font-license';
+          if (lic) {
+            licenseDiv.innerHTML = `本字體為 <b>${lic.name}</b>，授權：<a href="${lic.url}" target="_blank">${lic.license}</a>`;
+          } else {
+            licenseDiv.innerHTML = '請確認您有合法授權使用此字體。';
+          }
+          card.appendChild(licenseDiv);
+          // 複製 CSS 按鈕
+          const copyBtn = document.createElement('button');
+          copyBtn.className = 'copy-css-btn';
+          copyBtn.innerHTML = `<svg viewBox="0 0 20 20" fill="none"><rect x="5" y="5" width="10" height="12" rx="2" stroke="#333" stroke-width="1.5"/><rect x="7" y="3" width="10" height="12" rx="2" fill="#fff" stroke="#333" stroke-width="1.5"/></svg> 複製 CSS`;
+          copyBtn.onclick = () => {
+            const fontName = file.name.replace(/\.[^.]+$/, '');
+            const style = isItalic ? 'italic' : 'normal';
+            const weight = isBold ? 'bold' : 'normal';
+            const format = file.name.split('.').pop()?.toLowerCase() === 'otf' ? 'opentype' : 'truetype';
+            const css = makeFontFaceCSS(fontName, file.fontUrl, style, weight, format);
+            navigator.clipboard.writeText(css).then(() => {
+              showCopyToast('已複製 CSS！');
+            });
+          };
+          card.appendChild(copyBtn);
+          multiPreview.appendChild(card);
+        });
+      }
+
+      fontInput.addEventListener('change', function(e) {
+        const files = Array.from(e.target.files).slice(0, 3); // 最多 3 種
+        fontFiles = [];
+        fontFaces = [];
+        if (files.length === 0) {
+          document.getElementById('fontInfo').innerHTML = '<span id="fontNameInfo">尚未選擇字體</span>';
+          renderMultiPreview();
+          return;
+        }
+        let loadedCount = 0;
+        files.forEach((file, idx) => {
+          const fontName = file.name.replace(/\.[^/.]+$/, '') + '_' + idx;
+          const ext = file.name.split('.').pop().toUpperCase();
+          const size = (file.size/1024).toFixed(1) + ' KB';
+          fontFiles.push({ name: file.name, ext, size, fontName });
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            const fontUrl = event.target.result;
+            const fontFace = new FontFace(fontName, `url(${fontUrl})`);
+            fontFace.load().then(function(loaded) {
+              document.fonts.add(loaded);
+              fontFaces.push(loaded);
+              loadedCount++;
+              if (loadedCount === files.length) {
+                renderMultiPreview();
+              }
+            });
+          };
+          reader.readAsDataURL(file);
+        });
+        // 顯示所有字體資訊
+        let infoHtml = '';
+        fontFiles.forEach(f => {
+          infoHtml += `<span>名稱：${f.name}</span>　<span>格式：${f.ext}</span>　<span>大小：${f.size}</span><br>`;
+        });
+        document.getElementById('fontInfo').innerHTML = infoHtml;
+      });
+
+      textInput.addEventListener('input', renderMultiPreview);
+
+      const sampleBtns = document.querySelectorAll('.sample-btn');
+      sampleBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+          textInput.value = btn.getAttribute('data-sample');
+          renderMultiPreview();
+        });
+      });
+
+      const fontSizeRange = document.getElementById('fontSizeRange');
+      const fontSizeNum = document.getElementById('fontSizeNum');
+      const lineHeightRange = document.getElementById('lineHeightRange');
+      const lineHeightNum = document.getElementById('lineHeightNum');
+      const letterSpacingRange = document.getElementById('letterSpacingRange');
+      const letterSpacingNum = document.getElementById('letterSpacingNum');
+
+      fontSizeRange.addEventListener('input', function() {
+        fontSizeNum.value = fontSizeRange.value;
+      });
+      fontSizeNum.addEventListener('input', function() {
+        fontSizeRange.value = fontSizeNum.value;
+      });
+      lineHeightRange.addEventListener('input', function() {
+        lineHeightNum.value = lineHeightRange.value;
+      });
+      lineHeightNum.addEventListener('input', function() {
+        lineHeightRange.value = lineHeightNum.value;
+      });
+      letterSpacingRange.addEventListener('input', function() {
+        letterSpacingNum.value = letterSpacingRange.value;
+      });
+      letterSpacingNum.addEventListener('input', function() {
+        letterSpacingRange.value = letterSpacingNum.value;
+      });
+
+      // 初始化
+
+      const bgBtns = document.querySelectorAll('.bg-btn');
+      function updatePreviewBg(bg) {
+        if (bg === 'white') {
+          preview.style.background = '#fff';
+          preview.style.color = '#222';
+          preview.style.borderColor = '#e0e3e8';
+        } else if (bg === 'gray') {
+          preview.style.background = '#e5e7eb';
+          preview.style.color = '#222';
+          preview.style.borderColor = '#bfc3c9';
+        } else if (bg === 'black') {
+          preview.style.background = '#222';
+          preview.style.color = '#fff';
+          preview.style.borderColor = '#444';
+        } else if (bg === 'transparent') {
+          preview.style.background = 'repeating-conic-gradient(#e5e7eb 0% 25%, #fff 0% 50%) 50% / 32px 32px';
+          preview.style.color = '#222';
+          preview.style.borderColor = '#e0e3e8';
+        }
+        bgBtns.forEach(btn => btn.classList.remove('selected'));
+        document.querySelector(`.bg-btn[data-bg="${bg}"]`).classList.add('selected');
+        currentBg = bg;
+      }
+      bgBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+          updatePreviewBg(btn.getAttribute('data-bg'));
+        });
+      });
+      // 初始化
+      updatePreviewBg('white');
+    });
+  </script>
+</body>
+</html> 
